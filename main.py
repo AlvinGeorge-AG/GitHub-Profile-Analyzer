@@ -20,7 +20,7 @@ app = FastAPI(title="FastAPI BACKEND",version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # allow all for dev
+    allow_origins=["https://github-profile-analyzer-frontend.vercel.app/"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

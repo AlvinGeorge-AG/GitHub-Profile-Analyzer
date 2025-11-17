@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import os
+import json
 
 load_dotenv()
 
@@ -25,21 +26,74 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class Prompt(BaseModel):
-    prompt : str
+class GitHubLink(BaseModel):
+    link : str
+
+GITHUB_SYSTEM_PROMPT = """
+You are an expert GitHub profile analyzer.
+
+Analyze the supplied GitHub data and return STRICTLY this JSON:
+
+{
+  "score": 0-100,
+  "strengths": [],
+  "weaknesses": [],
+  "tech_stack": [],
+  "activity": "",
+  "suggestions": []
+}
+
+Rules:
+- No markdown
+- No backticks
+- No extra text
+- No explanations outside the JSON
+"""
 
 
 @app.get("/")
 async def home():
     return {"prompt":"Yesss FASTAPI is running!!!"}
 
+def extract_username(link: str):
+    link = link.rstrip("/")
+    return link.split("/")[-1]
+
+
+
+async def analyser(link:str):
+    username = extract_username(link)
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            user = await client.get(f"https://api.github.com/users/{username}")
+            repos = await client.get(f"https://api.github.com/users/{username}/repos?per_page=100")
+
+            user_json = user.json()
+            repos_json = repos.json()
+
+            return {
+                "user": user_json,
+                "repos": repos_json
+            }
+    except Exception as e:
+        print("ERROR DETAILS:", str(e))
+        #print("RAW RESPONSE:", user.text if 'response' in locals() else 'no response')
+        raise HTTPException(status_code=500, detail=str(e))   
+
+
 @app.post("/chat")
-async def chat(data:Prompt):
+async def chat(data:GitHubLink):
+    git_data = await analyser(data.link)
     payload = {
         "contents": [
-            {
+            {   
+                
                 "parts": [
-                    {"text": data.prompt}
+                    {"text": GITHUB_SYSTEM_PROMPT},
+                     {"text": "Here is the GitHub data:\n"
+                        + "User:\n" + json.dumps(git_data["user"], indent=2) +
+                        "\n\nRepos:\n" + json.dumps(git_data["repos"], indent=2)}
+
                 ]
             }
         ]
@@ -58,11 +112,16 @@ async def chat(data:Prompt):
 
         reply = result["candidates"][0]["content"]["parts"][0]["text"]
 
-        print("GEMINI RAW RESPONSE:", reply)
-        return reply
+        # print("GEMINI RAW RESPONSE:", reply)
+        clean = reply.replace("```json", "").replace("```", "").strip()
+        #print("Final data = ",clean)
+        return json.loads(clean)
+
         
 
     except Exception as e:
         print("ERROR DETAILS:", str(e))
         print("RAW RESPONSE:", response.text if 'response' in locals() else 'no response')
-        raise HTTPException(status_code=500, detail=str(e))    
+        raise HTTPException(status_code=500, detail=str(e))   
+
+

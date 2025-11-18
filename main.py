@@ -20,7 +20,7 @@ app = FastAPI(title="FastAPI BACKEND",version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://github-profile-analyzer-frontend.vercel.app"],  
+    allow_origins=["https://github-profile-analyzer-frontend.vercel.app/"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -77,7 +77,6 @@ async def analyser(link:str):
             }
     except Exception as e:
         print("ERROR DETAILS:", str(e))
-        #print("RAW RESPONSE:", user.text if 'response' in locals() else 'no response')
         raise HTTPException(status_code=500, detail=str(e))   
 
 
@@ -122,6 +121,4 @@ async def chat(data:GitHubLink):
     except Exception as e:
         print("ERROR DETAILS:", str(e))
         print("RAW RESPONSE:", response.text if 'response' in locals() else 'no response')
-        raise HTTPException(status_code=500, detail=str(e))   
-
-
+        raise HTTPException(status_code=500, detail=str(e))

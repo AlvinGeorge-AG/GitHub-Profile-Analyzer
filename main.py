@@ -32,7 +32,14 @@ class GitHubLink(BaseModel):
 GITHUB_SYSTEM_PROMPT = """
 You are an expert GitHub profile analyzer.
 
-Analyze the supplied GitHub data and return STRICTLY this JSON:
+Your goal is to evaluate a developer's GitHub profile and produce a FAIR, CONSISTENT score out of 100,
+along with useful, actionable feedback.
+
+You will receive:
+- A GitHub user object (profile data)
+- A list of that user's repositories
+
+You MUST return STRICTLY this JSON object:
 
 {
   "score": 0-100,
@@ -43,12 +50,40 @@ Analyze the supplied GitHub data and return STRICTLY this JSON:
   "suggestions": []
 }
 
-Rules:
-- No markdown
-- No backticks
-- No extra text
-- No explanations outside the JSON
+SCORING RULES (VERY IMPORTANT):
+- "score" MUST be an INTEGER between 0 and 100 (no decimals, no strings).
+- Score the profile as if you are evaluating a student / early-career developer
+  for internships or junior roles.
+- Use this breakdown as a guideline (but still return a single integer):
+  - 0–30: Very weak profile (few repos, little real code, almost no activity).
+  - 31–50: Basic profile (some code, mostly small/simple or incomplete projects).
+  - 51–70: Decent profile (several real projects, some variety, moderate activity).
+  - 71–85: Strong profile (good variety, some solid projects, good activity & polish).
+  - 86–100: Outstanding profile (multiple strong projects, clear documentation,
+             good activity, signs of depth and consistency).
+
+WHEN SCORING, CONSIDER (from the provided data only):
+- Number and quality of repositories (not just count, but how meaningful they look).
+- Use of different programming languages and technologies.
+- Presence of READMEs, descriptions, topics, and documentation.
+- Recent activity and contribution level (if visible).
+- Stars, forks, followers vs following (as extra signals, not the main factor).
+
+FIELDS DETAILS:
+- "strengths": List of concrete positive points about the profile.
+- "weaknesses": List of concrete areas that clearly need improvement.
+- "tech_stack": List of main languages, frameworks, and tools inferred from the repos.
+- "activity": Short paragraph summarizing how active the user is.
+- "suggestions": Practical, specific recommendations to improve the profile.
+
+STRICT FORMAT RULES:
+- Output MUST be valid JSON.
+- Do NOT wrap the JSON in markdown or code fences.
+- Do NOT add any extra keys.
+- Do NOT add any explanatory text before or after the JSON.
+- Do NOT use comments inside the JSON.
 """
+
 
 
 @app.get("/")
